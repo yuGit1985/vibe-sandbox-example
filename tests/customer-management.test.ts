@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { InMemoryAuthentication } from "@/fakes/in-memory-authentication";
+import { prepareLogin } from "@/inputs/prepare-login";
 import { prepareNote } from "@/inputs/prepare-note";
 import type { Customer } from "@/ports/customer-repository";
 import { addCustomerNote } from "@/usecases/add-customer-note";
+import { getAuthenticatedUser } from "@/usecases/get-authenticated-user";
+import { login } from "@/usecases/login";
+import { logout } from "@/usecases/logout";
 import { searchCustomers } from "@/usecases/search-customers";
 
 const customer: Customer = {
@@ -66,6 +71,62 @@ describe("prepareNote", () => {
     expect(prepareNote("  ")).toEqual({
       ok: false,
       message: "メモを入力してください。",
+    });
+  });
+});
+
+describe("authentication", () => {
+  it("有効な認証情報でセッションを作成し、ユーザーを取得する", async () => {
+    const authentication = new InMemoryAuthentication();
+    const result = await login({
+      authenticator: authentication,
+      sessions: authentication,
+      email: "kenta.takahashi@orbit.jp",
+      password: "orbit-demo",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await expect(
+      getAuthenticatedUser(authentication, result.token),
+    ).resolves.toMatchObject({
+      id: "usr-001",
+      name: "高橋 健太",
+      role: "管理者",
+    });
+
+    await logout(authentication, result.token);
+    await expect(
+      getAuthenticatedUser(authentication, result.token),
+    ).resolves.toBeNull();
+  });
+
+  it("無効な認証情報を拒否する", async () => {
+    const authentication = new InMemoryAuthentication();
+
+    await expect(
+      login({
+        authenticator: authentication,
+        sessions: authentication,
+        email: "kenta.takahashi@orbit.jp",
+        password: "wrong-password",
+      }),
+    ).resolves.toEqual({ ok: false });
+  });
+
+  it("ログイン入力を正規化し、必須項目を検証する", () => {
+    expect(prepareLogin("  KENTA.TAKAHASHI@ORBIT.JP ", "orbit-demo")).toEqual({
+      ok: true,
+      email: "kenta.takahashi@orbit.jp",
+      password: "orbit-demo",
+    });
+    expect(prepareLogin("", "")).toEqual({
+      ok: false,
+      fieldErrors: {
+        email: "メールアドレスを入力してください。",
+        password: "パスワードを入力してください。",
+      },
     });
   });
 });

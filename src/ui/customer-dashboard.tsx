@@ -2,6 +2,7 @@
 
 import { type FormEvent, useMemo, useState } from "react";
 import { prepareNote } from "@/inputs/prepare-note";
+import type { AuthenticatedUser } from "@/ports/authentication";
 import type {
   Customer,
   CustomerRank,
@@ -196,8 +197,12 @@ function formatNoteDate(value: string): string {
 
 export function CustomerDashboard({
   initialCustomers,
+  currentUser,
+  logoutAction,
 }: {
   initialCustomers: Customer[];
+  currentUser: AuthenticatedUser;
+  logoutAction: () => Promise<void>;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [query, setQuery] = useState("");
@@ -231,7 +236,7 @@ export function CustomerDashboard({
     const updatedCustomer = addCustomerNote({
       customer: selectedCustomer,
       body: prepared.value,
-      author: "高橋 健太",
+      author: currentUser.name,
     });
     setCustomers((current) =>
       current.map((customer) =>
@@ -280,12 +285,16 @@ export function CustomerDashboard({
           </a>
         </nav>
         <div className="sidebar-profile">
-          <span className="profile-avatar">高</span>
+          <span className="profile-avatar">{currentUser.initials}</span>
           <span>
-            <strong>高橋 健太</strong>
-            <small>管理者</small>
+            <strong>{currentUser.name}</strong>
+            <small>{currentUser.role}</small>
           </span>
-          <Icon name="chevron" size={16} />
+          <form action={logoutAction}>
+            <button className="sidebar-logout" type="submit">
+              ログアウト
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -302,10 +311,21 @@ export function CustomerDashboard({
             <Icon name="chevron" size={14} />
             <strong>顧客一覧</strong>
           </div>
-          <button className="icon-button" type="button" aria-label="通知を確認">
-            <Icon name="bell" size={19} />
-            <span className="notification-dot" />
-          </button>
+          <div className="topbar-actions">
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="通知を確認"
+            >
+              <Icon name="bell" size={19} />
+              <span className="notification-dot" />
+            </button>
+            <form action={logoutAction}>
+              <button className="mobile-logout" type="submit">
+                ログアウト
+              </button>
+            </form>
+          </div>
         </header>
 
         <div className="workspace">

@@ -53,6 +53,153 @@ textarea:focus-visible {
   border: 0;
 }
 
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(
+      circle at 18% 12%,
+      rgba(94, 158, 139, 0.22),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 88% 88%,
+      rgba(231, 111, 88, 0.16),
+      transparent 28%
+    ),
+    var(--navy-deep);
+}
+.login-card {
+  width: min(440px, 100%);
+  padding: 38px 42px 36px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 30px 80px rgba(5, 22, 27, 0.3);
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #20383f;
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+.login-brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff9ec;
+  background: linear-gradient(145deg, #e88768, #d45e50);
+  box-shadow: 0 7px 18px rgba(231, 111, 88, 0.25);
+}
+.login-copy {
+  margin: 40px 0 27px;
+}
+.login-copy h1 {
+  margin: 0 0 10px;
+  color: #1d3037;
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.login-copy p {
+  margin: 0;
+  color: #7b888e;
+  font-size: 12px;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+}
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.login-field label {
+  color: #42535a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.login-field input {
+  width: 100%;
+  height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d9e0e2;
+  border-radius: 10px;
+  color: #24363d;
+  background: #fbfcfc;
+  font-size: 13px;
+  transition: 160ms ease;
+}
+.login-field input:focus {
+  border-color: #72a595;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(68, 139, 117, 0.08);
+}
+.login-field input[aria-invalid="true"] {
+  border-color: #c76d5d;
+}
+.field-error,
+.login-error {
+  color: #ad4e40;
+  font-size: 10px;
+}
+.login-error {
+  margin: -3px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #f0c9c2;
+  border-radius: 9px;
+  background: #fff4f1;
+}
+.login-submit {
+  height: 47px;
+  margin-top: 3px;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  background: #287760;
+  box-shadow: 0 8px 20px rgba(37, 110, 88, 0.2);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+.login-submit:hover:not(:disabled) {
+  background: #20644f;
+  transform: translateY(-1px);
+}
+.login-submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.demo-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 23px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: #748187;
+  background: #f1f4f4;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+}
+.demo-credentials strong {
+  margin-bottom: 2px;
+  color: #53646a;
+  font-family: Arial, "Yu Gothic", sans-serif;
+  font-size: 10px;
+}
+
 .app-shell {
   min-height: 100vh;
 }
@@ -180,6 +327,20 @@ textarea:focus-visible {
   color: #829899;
   font-size: 10px;
 }
+.sidebar-profile form {
+  margin-left: auto;
+}
+.sidebar-logout {
+  padding: 5px 0;
+  border: 0;
+  color: #91a5a5;
+  background: transparent;
+  font-size: 9px;
+  cursor: pointer;
+}
+.sidebar-logout:hover {
+  color: white;
+}
 
 .main-content {
   min-width: 0;
@@ -234,6 +395,23 @@ textarea:focus-visible {
   border: 1.5px solid white;
   border-radius: 50%;
   background: var(--coral);
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.mobile-logout {
+  display: none;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: #64747b;
+  background: white;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
 }
 .mobile-brand {
   display: none;
@@ -922,6 +1100,9 @@ textarea:focus-visible {
   .breadcrumbs {
     display: none;
   }
+  .mobile-logout {
+    display: block;
+  }
   .workspace {
     padding: 24px 18px 35px;
   }
@@ -965,6 +1146,12 @@ textarea:focus-visible {
   }
 }
 @media (max-width: 460px) {
+  .login-card {
+    padding: 30px 24px 27px;
+  }
+  .login-copy {
+    margin-top: 32px;
+  }
   .workspace {
     padding-inline: 11px;
   }
