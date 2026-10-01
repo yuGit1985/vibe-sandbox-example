@@ -491,6 +491,12 @@ textarea:focus-visible {
   color: #a1aaae;
   font-size: 9px;
 }
+.customer-row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .status-badge {
   display: inline-flex;
   flex: 0 0 auto;
@@ -519,6 +525,35 @@ textarea:focus-visible {
 .status-inactive {
   color: #778187;
   background: #e9edef;
+}
+.rank-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.rank-s {
+  color: #8a5b18;
+  background: #fff7df;
+}
+.rank-a {
+  color: #476c82;
+  background: #edf5f8;
+}
+.rank-b {
+  color: #5e7169;
+  background: #f0f5f2;
+}
+.rank-c {
+  color: #7d7772;
+  background: #f4f2f0;
 }
 .empty-search {
   display: flex;
@@ -576,6 +611,7 @@ textarea:focus-visible {
 .detail-name-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .detail-name-row h2 {

@@ -14,6 +14,7 @@ const customer: Customer = {
   phone: "03-0000-0000",
   location: "東京都",
   status: "active",
+  rank: "S",
   lastContactedAt: "2026-09-28",
   registeredAt: "2024-04-12",
   avatarTone: "coral",

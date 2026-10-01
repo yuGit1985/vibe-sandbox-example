@@ -2,7 +2,11 @@
 
 import { type FormEvent, useMemo, useState } from "react";
 import { prepareNote } from "@/inputs/prepare-note";
-import type { Customer, CustomerStatus } from "@/ports/customer-repository";
+import type {
+  Customer,
+  CustomerRank,
+  CustomerStatus,
+} from "@/ports/customer-repository";
 import { addCustomerNote } from "@/usecases/add-customer-note";
 import { searchCustomers } from "@/usecases/search-customers";
 
@@ -29,6 +33,14 @@ const statusDetails: Record<
   "follow-up": { label: "フォロー中", className: "status-follow" },
   inactive: { label: "休眠", className: "status-inactive" },
 };
+
+const rankDetails: Record<CustomerRank, { label: string; className: string }> =
+  {
+    S: { label: "ランク S", className: "rank-s" },
+    A: { label: "ランク A", className: "rank-a" },
+    B: { label: "ランク B", className: "rank-b" },
+    C: { label: "ランク C", className: "rank-c" },
+  };
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -152,6 +164,13 @@ function StatusBadge({ status }: { status: CustomerStatus }) {
       <span className="status-dot" />
       {detail.label}
     </span>
+  );
+}
+
+function RankBadge({ rank }: { rank: CustomerRank }) {
+  const detail = rankDetails[rank];
+  return (
+    <span className={`rank-badge ${detail.className}`}>{detail.label}</span>
   );
 }
 
@@ -359,9 +378,12 @@ export function CustomerDashboard({
                         <StatusBadge status={customer.status} />
                       </span>
                       <span>{customer.company}</span>
-                      <small>
-                        最終連絡 {formatDate(customer.lastContactedAt, false)}
-                      </small>
+                      <span className="customer-row-meta">
+                        <small>
+                          最終連絡 {formatDate(customer.lastContactedAt, false)}
+                        </small>
+                        <RankBadge rank={customer.rank} />
+                      </span>
                     </span>
                     <Icon name="chevron" size={16} />
                   </button>
@@ -391,6 +413,7 @@ export function CustomerDashboard({
                         {selectedCustomer.name}
                       </h2>
                       <StatusBadge status={selectedCustomer.status} />
+                      <RankBadge rank={selectedCustomer.rank} />
                     </div>
                     <p>{selectedCustomer.kana}</p>
                     <strong>{selectedCustomer.company}</strong>
