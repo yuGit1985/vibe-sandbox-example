@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { InMemoryAuthentication } from "@/fakes/in-memory-authentication";
 import { InMemoryEmailSender } from "@/fakes/in-memory-email-sender";
+import { prepareCustomer } from "@/inputs/prepare-customer";
 import { prepareCustomerEmail } from "@/inputs/prepare-customer-email";
 import { prepareLogin } from "@/inputs/prepare-login";
 import { prepareNote } from "@/inputs/prepare-note";
 import type { Customer } from "@/ports/customer-repository";
 import { addCustomerNote } from "@/usecases/add-customer-note";
+import { deleteCustomer } from "@/usecases/delete-customer";
 import { getAuthenticatedUser } from "@/usecases/get-authenticated-user";
 import { login } from "@/usecases/login";
 import { logout } from "@/usecases/logout";
 import { searchCustomers } from "@/usecases/search-customers";
 import { sendCustomerEmail } from "@/usecases/send-customer-email";
+import { updateCustomer } from "@/usecases/update-customer";
 
 const customer: Customer = {
   id: "cus-test",
@@ -59,6 +62,69 @@ describe("addCustomerNote", () => {
       createdAt: "2026-10-01T01:00:00.000Z",
     });
     expect(customer.notes).toHaveLength(0);
+  });
+});
+
+describe("customer maintenance", () => {
+  it("入力を正規化して顧客情報を更新する", () => {
+    const formData = new FormData();
+    formData.set("name", "  佐藤 美咲  ");
+    formData.set("kana", " さとう みさき ");
+    formData.set("company", " 株式会社オービット ");
+    formData.set("role", " 執行役員 ");
+    formData.set("email", " MISAKI@EXAMPLE.COM ");
+    formData.set("phone", " 03-1234-5678 ");
+    formData.set("location", " 東京都 港区 ");
+    formData.set("status", "follow-up");
+    formData.set("rank", "A");
+
+    const prepared = prepareCustomer(formData);
+    expect(prepared).toEqual({
+      ok: true,
+      value: {
+        name: "佐藤 美咲",
+        kana: "さとう みさき",
+        company: "株式会社オービット",
+        role: "執行役員",
+        email: "misaki@example.com",
+        phone: "03-1234-5678",
+        location: "東京都 港区",
+        status: "follow-up",
+        rank: "A",
+      },
+    });
+    if (!prepared.ok) return;
+
+    const updated = updateCustomer(customer, prepared.value);
+    expect(updated).toMatchObject(prepared.value);
+    expect(updated.id).toBe(customer.id);
+    expect(customer.company).toBe("株式会社アトラス");
+  });
+
+  it("必須項目とメールアドレスを検証する", () => {
+    const formData = new FormData();
+    formData.set("email", "invalid-email");
+    formData.set("status", "unknown");
+    formData.set("rank", "Z");
+
+    const prepared = prepareCustomer(formData);
+    expect(prepared).toMatchObject({
+      ok: false,
+      fieldErrors: {
+        name: "氏名を入力してください。",
+        email: "正しいメールアドレスを入力してください。",
+        status: "ステータスを選択してください。",
+        rank: "ランクを選択してください。",
+      },
+    });
+  });
+
+  it("指定した顧客だけを削除し、元の一覧を変更しない", () => {
+    const anotherCustomer = { ...customer, id: "cus-another" };
+    const customers = [customer, anotherCustomer];
+
+    expect(deleteCustomer(customers, customer.id)).toEqual([anotherCustomer]);
+    expect(customers).toHaveLength(2);
   });
 });
 

@@ -2,6 +2,10 @@
 
 import { type FormEvent, useMemo, useState, useTransition } from "react";
 import type { CustomerEmailActionResult } from "@/inputs/customer-email-actions";
+import {
+  type CustomerFieldErrors,
+  prepareCustomer,
+} from "@/inputs/prepare-customer";
 import { prepareNote } from "@/inputs/prepare-note";
 import type { AuthenticatedUser } from "@/ports/authentication";
 import type {
@@ -10,13 +14,16 @@ import type {
   CustomerStatus,
 } from "@/ports/customer-repository";
 import { addCustomerNote } from "@/usecases/add-customer-note";
+import { deleteCustomer } from "@/usecases/delete-customer";
 import { searchCustomers } from "@/usecases/search-customers";
+import { updateCustomer } from "@/usecases/update-customer";
 
 type IconName =
   | "bell"
   | "chevron"
   | "company"
   | "dashboard"
+  | "edit"
   | "email"
   | "help"
   | "location"
@@ -25,7 +32,8 @@ type IconName =
   | "phone"
   | "search"
   | "settings"
-  | "sparkle";
+  | "sparkle"
+  | "trash";
 
 const statusDetails: Record<
   CustomerStatus,
@@ -65,6 +73,12 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
         <rect x="14" y="3" width="7" height="7" rx="2" />
         <rect x="3" y="14" width="7" height="7" rx="2" />
         <rect x="14" y="14" width="7" height="7" rx="2" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
       </>
     ),
     email: (
@@ -117,6 +131,11 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       <>
         <path d="m12 3-1 3.5A5 5 0 0 1 7.5 10L4 11l3.5 1A5 5 0 0 1 11 15.5l1 3.5 1-3.5a5 5 0 0 1 3.5-3.5l3.5-1-3.5-1A5 5 0 0 1 13 6.5Z" />
         <path d="m5 3-.4 1.4L3 5l1.6.6L5 7l.4-1.4L7 5l-1.6-.6Z" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v5M14 11v5" />
       </>
     ),
   };
@@ -216,9 +235,13 @@ export function CustomerDashboard({
     text: string;
   } | null>(null);
   const [isEmailComposerOpen, setIsEmailComposerOpen] = useState(false);
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
+  const [isDeleteCustomerOpen, setIsDeleteCustomerOpen] = useState(false);
+  const [customerFieldErrors, setCustomerFieldErrors] =
+    useState<CustomerFieldErrors>({});
   const [emailMessage, setEmailMessage] =
     useState<CustomerEmailActionResult | null>(null);
-  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isSendingEmail, startEmailTransition] = useTransition();
 
   const filteredCustomers = useMemo(
@@ -266,9 +289,48 @@ export function CustomerDashboard({
       if (result.ok) {
         form.reset();
         setIsEmailComposerOpen(false);
-        setDeliveryNotice(result.message);
+        setActionNotice(result.message);
       }
     });
+  }
+
+  function handleEditCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedCustomer) return;
+
+    const prepared = prepareCustomer(new FormData(event.currentTarget));
+    if (!prepared.ok) {
+      setCustomerFieldErrors(prepared.fieldErrors);
+      return;
+    }
+
+    const updatedCustomer = updateCustomer(selectedCustomer, prepared.value);
+    setCustomers((current) =>
+      current.map((customer) =>
+        customer.id === selectedCustomer.id ? updatedCustomer : customer,
+      ),
+    );
+    setCustomerFieldErrors({});
+    setIsEditCustomerOpen(false);
+    setActionNotice("顧客情報を更新しました。");
+  }
+
+  function handleDeleteCustomer() {
+    if (!selectedCustomer) return;
+
+    const selectedIndex = customers.findIndex(
+      (customer) => customer.id === selectedCustomer.id,
+    );
+    const remainingCustomers = deleteCustomer(customers, selectedCustomer.id);
+    const nextCustomer =
+      remainingCustomers[selectedIndex] ??
+      remainingCustomers[selectedIndex - 1] ??
+      remainingCustomers[0];
+
+    setCustomers(remainingCustomers);
+    setSelectedId(nextCustomer?.id ?? "");
+    setIsDeleteCustomerOpen(false);
+    setActionNotice(`${selectedCustomer.name}さんを削除しました。`);
   }
 
   return (
@@ -414,8 +476,10 @@ export function CustomerDashboard({
                       setSelectedId(customer.id);
                       setNoteMessage(null);
                       setEmailMessage(null);
-                      setDeliveryNotice(null);
+                      setActionNotice(null);
                       setIsEmailComposerOpen(false);
+                      setIsEditCustomerOpen(false);
+                      setIsDeleteCustomerOpen(false);
                     }}
                   >
                     <Avatar customer={customer} />
@@ -479,23 +543,35 @@ export function CustomerDashboard({
                       メールを送信
                     </button>
                     <button
-                      className="more-button"
+                      className="customer-action-button"
                       type="button"
-                      aria-label="その他の操作"
+                      onClick={() => {
+                        setCustomerFieldErrors({});
+                        setIsEditCustomerOpen(true);
+                      }}
                     >
-                      •••
+                      <Icon name="edit" size={15} />
+                      編集
+                    </button>
+                    <button
+                      className="customer-action-button danger"
+                      type="button"
+                      onClick={() => setIsDeleteCustomerOpen(true)}
+                    >
+                      <Icon name="trash" size={15} />
+                      削除
                     </button>
                   </div>
                 </div>
 
-                {deliveryNotice && (
+                {actionNotice && (
                   <output className="delivery-notice">
-                    <Icon name="email" size={16} />
-                    {deliveryNotice}
+                    <Icon name="people" size={16} />
+                    {actionNotice}
                     <button
                       type="button"
-                      onClick={() => setDeliveryNotice(null)}
-                      aria-label="送信完了メッセージを閉じる"
+                      onClick={() => setActionNotice(null)}
+                      aria-label="完了メッセージを閉じる"
                     >
                       ×
                     </button>
@@ -637,9 +713,238 @@ export function CustomerDashboard({
                 </div>
               </section>
             )}
+            {!selectedCustomer && (
+              <section className="customer-detail-panel empty-customer-detail">
+                <span>
+                  <Icon name="people" size={25} />
+                </span>
+                <strong>顧客が登録されていません</strong>
+                <p>顧客を追加すると、ここに詳細が表示されます。</p>
+              </section>
+            )}
           </div>
         </div>
       </main>
+      {isEditCustomerOpen && selectedCustomer && (
+        <div className="email-modal-backdrop">
+          <section
+            className="email-modal customer-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="customer-edit-title"
+          >
+            <header>
+              <div>
+                <span className="section-icon">
+                  <Icon name="edit" size={18} />
+                </span>
+                <div>
+                  <h2 id="customer-edit-title">顧客情報を編集</h2>
+                  <p>{selectedCustomer.name}さんの登録情報を更新します。</p>
+                </div>
+              </div>
+              <button
+                className="email-modal-close"
+                type="button"
+                onClick={() => setIsEditCustomerOpen(false)}
+                aria-label="顧客編集画面を閉じる"
+              >
+                ×
+              </button>
+            </header>
+            <form
+              onSubmit={handleEditCustomer}
+              onChange={() => setCustomerFieldErrors({})}
+            >
+              <div className="customer-edit-grid">
+                <label className="email-field">
+                  <span>氏名</span>
+                  <input
+                    name="name"
+                    defaultValue={selectedCustomer.name}
+                    maxLength={100}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.name)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.name}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>ふりがな</span>
+                  <input
+                    name="kana"
+                    defaultValue={selectedCustomer.kana}
+                    maxLength={100}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.kana)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.kana}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>会社名</span>
+                  <input
+                    name="company"
+                    defaultValue={selectedCustomer.company}
+                    maxLength={100}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.company)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.company}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>役職</span>
+                  <input
+                    name="role"
+                    defaultValue={selectedCustomer.role}
+                    maxLength={100}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.role)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.role}
+                  </small>
+                </label>
+                <label className="email-field customer-edit-wide">
+                  <span>メールアドレス</span>
+                  <input
+                    name="email"
+                    type="email"
+                    defaultValue={selectedCustomer.email}
+                    maxLength={254}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.email)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.email}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>電話番号</span>
+                  <input
+                    name="phone"
+                    type="tel"
+                    defaultValue={selectedCustomer.phone}
+                    maxLength={30}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.phone)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.phone}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>所在地</span>
+                  <input
+                    name="location"
+                    defaultValue={selectedCustomer.location}
+                    maxLength={100}
+                    required
+                    aria-invalid={Boolean(customerFieldErrors.location)}
+                  />
+                  <small className="field-error">
+                    {customerFieldErrors.location}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>ステータス</span>
+                  <select name="status" defaultValue={selectedCustomer.status}>
+                    <option value="active">取引中</option>
+                    <option value="follow-up">フォロー中</option>
+                    <option value="inactive">休眠</option>
+                  </select>
+                  <small className="field-error">
+                    {customerFieldErrors.status}
+                  </small>
+                </label>
+                <label className="email-field">
+                  <span>ランク</span>
+                  <select name="rank" defaultValue={selectedCustomer.rank}>
+                    <option value="S">ランク S</option>
+                    <option value="A">ランク A</option>
+                    <option value="B">ランク B</option>
+                    <option value="C">ランク C</option>
+                  </select>
+                  <small className="field-error">
+                    {customerFieldErrors.rank}
+                  </small>
+                </label>
+              </div>
+              <footer>
+                <button
+                  className="email-cancel-button"
+                  type="button"
+                  onClick={() => setIsEditCustomerOpen(false)}
+                >
+                  キャンセル
+                </button>
+                <button className="email-submit-button" type="submit">
+                  <Icon name="edit" size={16} />
+                  変更を保存
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+      {isDeleteCustomerOpen && selectedCustomer && (
+        <div className="email-modal-backdrop">
+          <section
+            className="email-modal delete-customer-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="customer-delete-title"
+            aria-describedby="customer-delete-description"
+          >
+            <header>
+              <div>
+                <span className="section-icon section-icon-danger">
+                  <Icon name="trash" size={18} />
+                </span>
+                <div>
+                  <h2 id="customer-delete-title">顧客を削除</h2>
+                  <p>この操作は取り消せません。</p>
+                </div>
+              </div>
+              <button
+                className="email-modal-close"
+                type="button"
+                onClick={() => setIsDeleteCustomerOpen(false)}
+                aria-label="削除確認画面を閉じる"
+              >
+                ×
+              </button>
+            </header>
+            <div className="delete-customer-content">
+              <p id="customer-delete-description">
+                <strong>{selectedCustomer.name}</strong>
+                さんと、関連するメモを顧客一覧から削除します。
+              </p>
+              <footer>
+                <button
+                  className="email-cancel-button"
+                  type="button"
+                  onClick={() => setIsDeleteCustomerOpen(false)}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="customer-delete-button"
+                  type="button"
+                  onClick={handleDeleteCustomer}
+                >
+                  <Icon name="trash" size={16} />
+                  削除する
+                </button>
+              </footer>
+            </div>
+          </section>
+        </div>
+      )}
       {isEmailComposerOpen && selectedCustomer && (
         <div className="email-modal-backdrop">
           <section

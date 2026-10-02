@@ -27,6 +27,7 @@ body {
 }
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -37,6 +38,7 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid rgba(43, 126, 101, 0.25);
   outline-offset: 2px;
@@ -839,6 +841,34 @@ textarea:focus-visible {
   background: #276d5a;
   transform: translateY(-1px);
 }
+.customer-action-button {
+  display: flex;
+  height: 35px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid #d9e1e2;
+  border-radius: 9px;
+  color: #52666e;
+  background: white;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+.customer-action-button:hover {
+  border-color: #93b4a9;
+  color: #2f725f;
+  background: #f5faf8;
+}
+.customer-action-button.danger {
+  color: #a85346;
+}
+.customer-action-button.danger:hover {
+  border-color: #d9a69d;
+  color: #994236;
+  background: #fff7f5;
+}
 .more-button {
   width: 35px;
   height: 35px;
@@ -1112,6 +1142,34 @@ textarea:focus-visible {
   color: #9aa4a8;
   font-size: 9px;
 }
+.empty-customer-detail {
+  display: flex;
+  min-height: 690px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 35px;
+  color: #77868c;
+  text-align: center;
+}
+.empty-customer-detail > span {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 14px;
+  place-items: center;
+  border-radius: 16px;
+  color: #568979;
+  background: #e7f1ed;
+}
+.empty-customer-detail strong {
+  color: #35474e;
+  font-size: 13px;
+}
+.empty-customer-detail p {
+  margin: 7px 0 0;
+  font-size: 10px;
+}
 
 .email-modal-backdrop {
   position: fixed;
@@ -1207,6 +1265,7 @@ textarea:focus-visible {
   gap: 7px;
 }
 .email-field input,
+.email-field select,
 .email-field textarea {
   width: 100%;
   border: 1px solid #d9e1e2;
@@ -1220,6 +1279,10 @@ textarea:focus-visible {
   height: 43px;
   padding: 0 12px;
 }
+.email-field select {
+  height: 43px;
+  padding: 0 34px 0 12px;
+}
 .email-field textarea {
   min-height: 170px;
   resize: vertical;
@@ -1227,6 +1290,7 @@ textarea:focus-visible {
   line-height: 1.7;
 }
 .email-field input:focus,
+.email-field select:focus,
 .email-field textarea:focus {
   border-color: #78a99b;
   box-shadow: 0 0 0 3px rgba(68, 139, 117, 0.08);
@@ -1282,6 +1346,66 @@ textarea:focus-visible {
 }
 .email-submit-button:hover:not(:disabled) {
   background: #276d5a;
+}
+.customer-edit-modal {
+  width: min(680px, 100%);
+}
+.customer-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.customer-edit-wide {
+  grid-column: 1 / -1;
+}
+.customer-edit-grid .field-error {
+  min-height: 12px;
+}
+.section-icon-danger {
+  color: #a64e42;
+  background: #fae8e4;
+}
+.delete-customer-modal {
+  width: min(470px, 100%);
+}
+.delete-customer-content {
+  padding: 22px 24px 24px;
+}
+.delete-customer-content > p {
+  margin: 0;
+  color: #586970;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.delete-customer-content > p strong {
+  color: #293b42;
+}
+.delete-customer-content footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 23px;
+}
+.delete-customer-content footer button {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 15px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.customer-delete-button {
+  border: 0;
+  color: white;
+  background: #b55547;
+  box-shadow: 0 5px 13px rgba(152, 61, 47, 0.18);
+}
+.customer-delete-button:hover {
+  background: #994236;
 }
 
 @media (max-width: 1080px) {
@@ -1396,6 +1520,7 @@ textarea:focus-visible {
   .detail-actions {
     width: 100%;
     margin-left: 76px;
+    flex-wrap: wrap;
   }
   .email-modal-backdrop {
     padding: 10px;
@@ -1409,6 +1534,12 @@ textarea:focus-visible {
   }
   .email-recipient small {
     grid-column: 2;
+  }
+  .customer-edit-grid {
+    grid-template-columns: 1fr;
+  }
+  .customer-edit-wide {
+    grid-column: auto;
   }
   .avatar-large {
     width: 58px;
