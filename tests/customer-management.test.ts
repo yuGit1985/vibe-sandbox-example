@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { InMemoryAuthentication } from "@/fakes/in-memory-authentication";
+import { InMemoryEmailSender } from "@/fakes/in-memory-email-sender";
+import { prepareCustomerEmail } from "@/inputs/prepare-customer-email";
 import { prepareLogin } from "@/inputs/prepare-login";
 import { prepareNote } from "@/inputs/prepare-note";
 import type { Customer } from "@/ports/customer-repository";
@@ -8,6 +10,7 @@ import { getAuthenticatedUser } from "@/usecases/get-authenticated-user";
 import { login } from "@/usecases/login";
 import { logout } from "@/usecases/logout";
 import { searchCustomers } from "@/usecases/search-customers";
+import { sendCustomerEmail } from "@/usecases/send-customer-email";
 
 const customer: Customer = {
   id: "cus-test",
@@ -71,6 +74,57 @@ describe("prepareNote", () => {
     expect(prepareNote("  ")).toEqual({
       ok: false,
       message: "メモを入力してください。",
+    });
+  });
+});
+
+describe("customer email", () => {
+  it("顧客へのメールを送信する", async () => {
+    const emailSender = new InMemoryEmailSender();
+
+    await expect(
+      sendCustomerEmail({
+        emailSender,
+        recipientEmail: customer.email,
+        subject: "次回のお打ち合わせについて",
+        body: "候補日をご確認ください。",
+        senderName: "高橋 健太",
+      }),
+    ).resolves.toEqual({ deliveryId: "email-1" });
+    expect(emailSender.listSentEmails()).toEqual([
+      {
+        to: customer.email,
+        subject: "次回のお打ち合わせについて",
+        body: "候補日をご確認ください。",
+        senderName: "高橋 健太",
+      },
+    ]);
+  });
+
+  it("メール入力を正規化する", () => {
+    expect(
+      prepareCustomerEmail(
+        " cus-test ",
+        " 次回のお打ち合わせについて ",
+        " 候補日をご確認ください。 ",
+      ),
+    ).toEqual({
+      ok: true,
+      value: {
+        customerId: "cus-test",
+        subject: "次回のお打ち合わせについて",
+        body: "候補日をご確認ください。",
+      },
+    });
+  });
+
+  it("空の件名と本文を拒否する", () => {
+    expect(prepareCustomerEmail("cus-test", " ", " ")).toEqual({
+      ok: false,
+      fieldErrors: {
+        subject: "件名を入力してください。",
+        body: "本文を入力してください。",
+      },
     });
   });
 });

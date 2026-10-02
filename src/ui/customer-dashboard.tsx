@@ -1,6 +1,7 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState, useTransition } from "react";
+import type { CustomerEmailActionResult } from "@/inputs/customer-email-actions";
 import { prepareNote } from "@/inputs/prepare-note";
 import type { AuthenticatedUser } from "@/ports/authentication";
 import type {
@@ -199,10 +200,12 @@ export function CustomerDashboard({
   initialCustomers,
   currentUser,
   logoutAction,
+  sendEmailAction,
 }: {
   initialCustomers: Customer[];
   currentUser: AuthenticatedUser;
   logoutAction: () => Promise<void>;
+  sendEmailAction: (formData: FormData) => Promise<CustomerEmailActionResult>;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [query, setQuery] = useState("");
@@ -212,6 +215,11 @@ export function CustomerDashboard({
     type: "error" | "success";
     text: string;
   } | null>(null);
+  const [isEmailComposerOpen, setIsEmailComposerOpen] = useState(false);
+  const [emailMessage, setEmailMessage] =
+    useState<CustomerEmailActionResult | null>(null);
+  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
+  const [isSendingEmail, startEmailTransition] = useTransition();
 
   const filteredCustomers = useMemo(
     () => searchCustomers(customers, query),
@@ -245,6 +253,22 @@ export function CustomerDashboard({
     );
     setNoteDraft("");
     setNoteMessage({ type: "success", text: "メモを追加しました。" });
+  }
+
+  function handleSendEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+
+    startEmailTransition(async () => {
+      const result = await sendEmailAction(new FormData(form));
+      setEmailMessage(result);
+
+      if (result.ok) {
+        form.reset();
+        setIsEmailComposerOpen(false);
+        setDeliveryNotice(result.message);
+      }
+    });
   }
 
   return (
@@ -389,6 +413,9 @@ export function CustomerDashboard({
                     onClick={() => {
                       setSelectedId(customer.id);
                       setNoteMessage(null);
+                      setEmailMessage(null);
+                      setDeliveryNotice(null);
+                      setIsEmailComposerOpen(false);
                     }}
                   >
                     <Avatar customer={customer} />
@@ -439,14 +466,41 @@ export function CustomerDashboard({
                     <strong>{selectedCustomer.company}</strong>
                     <span>{selectedCustomer.role}</span>
                   </div>
-                  <button
-                    className="more-button"
-                    type="button"
-                    aria-label="その他の操作"
-                  >
-                    •••
-                  </button>
+                  <div className="detail-actions">
+                    <button
+                      className="email-compose-button"
+                      type="button"
+                      onClick={() => {
+                        setEmailMessage(null);
+                        setIsEmailComposerOpen(true);
+                      }}
+                    >
+                      <Icon name="email" size={16} />
+                      メールを送信
+                    </button>
+                    <button
+                      className="more-button"
+                      type="button"
+                      aria-label="その他の操作"
+                    >
+                      •••
+                    </button>
+                  </div>
                 </div>
+
+                {deliveryNotice && (
+                  <output className="delivery-notice">
+                    <Icon name="email" size={16} />
+                    {deliveryNotice}
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryNotice(null)}
+                      aria-label="送信完了メッセージを閉じる"
+                    >
+                      ×
+                    </button>
+                  </output>
+                )}
 
                 <div className="detail-body">
                   <section
@@ -586,6 +640,107 @@ export function CustomerDashboard({
           </div>
         </div>
       </main>
+      {isEmailComposerOpen && selectedCustomer && (
+        <div className="email-modal-backdrop">
+          <section
+            className="email-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="email-modal-title"
+          >
+            <header>
+              <div>
+                <span className="section-icon">
+                  <Icon name="email" size={18} />
+                </span>
+                <div>
+                  <h2 id="email-modal-title">メールを作成</h2>
+                  <p>{selectedCustomer.name}さんへメッセージを送信します。</p>
+                </div>
+              </div>
+              <button
+                className="email-modal-close"
+                type="button"
+                onClick={() => setIsEmailComposerOpen(false)}
+                aria-label="メール作成画面を閉じる"
+                disabled={isSendingEmail}
+              >
+                ×
+              </button>
+            </header>
+            <form onSubmit={handleSendEmail}>
+              <input
+                type="hidden"
+                name="customerId"
+                value={selectedCustomer.id}
+              />
+              <div className="email-recipient">
+                <span>宛先</span>
+                <strong>{selectedCustomer.name}</strong>
+                <small>{selectedCustomer.email}</small>
+              </div>
+              <label className="email-field">
+                <span>件名</span>
+                <input
+                  name="subject"
+                  type="text"
+                  maxLength={100}
+                  required
+                  aria-invalid={Boolean(
+                    !emailMessage?.ok && emailMessage?.fieldErrors?.subject,
+                  )}
+                  aria-describedby="email-subject-error"
+                  placeholder="件名を入力"
+                  onChange={() => setEmailMessage(null)}
+                />
+                <small id="email-subject-error" className="field-error">
+                  {!emailMessage?.ok && emailMessage?.fieldErrors?.subject}
+                </small>
+              </label>
+              <label className="email-field">
+                <span>本文</span>
+                <textarea
+                  name="body"
+                  maxLength={2000}
+                  required
+                  aria-invalid={Boolean(
+                    !emailMessage?.ok && emailMessage?.fieldErrors?.body,
+                  )}
+                  aria-describedby="email-body-error"
+                  placeholder={`${selectedCustomer.name}さんへのメッセージを入力...`}
+                  onChange={() => setEmailMessage(null)}
+                />
+                <small id="email-body-error" className="field-error">
+                  {!emailMessage?.ok && emailMessage?.fieldErrors?.body}
+                </small>
+              </label>
+              {!emailMessage?.ok && emailMessage?.message && (
+                <p className="email-form-error" role="alert">
+                  {emailMessage.message}
+                </p>
+              )}
+              <footer>
+                <button
+                  className="email-cancel-button"
+                  type="button"
+                  onClick={() => setIsEmailComposerOpen(false)}
+                  disabled={isSendingEmail}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="email-submit-button"
+                  type="submit"
+                  disabled={isSendingEmail}
+                >
+                  <Icon name="email" size={16} />
+                  {isSendingEmail ? "送信中..." : "メールを送信"}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
